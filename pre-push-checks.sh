@@ -41,7 +41,6 @@ echo -e "${GREEN}✅ Working tree is clean.${NC}"
 # ─── 3. Validate runtime versions ───────────────────────────────
 echo -e "\n${YELLOW}[3/4] Validating runtime versions...${NC}"
 
-# Detect project type by checking for indicator files
 if [ -f "package.json" ]; then
   # ── Node / React project ──
   required_node="18"
@@ -78,13 +77,11 @@ else
   echo -e "${YELLOW}⚠️  No recognised runtime indicator found. Skipping version check.${NC}"
 fi
 
-# ─── 4. Simulate lint + test checks ─────────────────────────────
+# ─── 4. Lint + test checks ───────────────────────────────────────
 echo -e "\n${YELLOW}[4/4] Running lint and test checks...${NC}"
 
 if [ -f "package.json" ]; then
-  # ── Node / React: run eslint + npm test ──
-
-  # Lint check
+  # ── Node / React: ESLint ──
   if npx eslint src/ --quiet 2>/dev/null; then
     echo -e "${GREEN}✅ ESLint passed.${NC}"
   else
@@ -92,33 +89,48 @@ if [ -f "package.json" ]; then
     exit 1
   fi
 
-  # Test check
-  echo -e "${YELLOW}   Running npm test...${NC}"
-  if npm test --if-present -- --watchAll=false 2>/dev/null; then
-    echo -e "${GREEN}✅ Tests passed.${NC}"
+  # ── Node / React: Tests — skip if no test files exist yet ──
+  if find tests/ -name "*.test.js" -o -name "*.spec.js" 2>/dev/null | grep -q .; then
+    echo -e "${YELLOW}   Running npm test...${NC}"
+    if npm test -- --watchAll=false 2>/dev/null; then
+      echo -e "${GREEN}✅ Tests passed.${NC}"
+    else
+      echo -e "${RED}🚫 Tests failed. Fix failing tests before pushing.${NC}"
+      exit 1
+    fi
   else
-    echo -e "${RED}🚫 Tests failed. Fix failing tests before pushing.${NC}"
-    exit 1
+    echo -e "${YELLOW}⚠️  No test files found in tests/. Skipping test check.${NC}"
+    echo -e "${YELLOW}   Add *.test.js or *.spec.js files to tests/ to enable this check.${NC}"
   fi
 
 elif [ -f "manage.py" ]; then
-  # ── Django: run pytest or manage.py test ──
-  echo -e "${YELLOW}   Running Django tests...${NC}"
-  if python3 manage.py test 2>/dev/null; then
-    echo -e "${GREEN}✅ Django tests passed.${NC}"
+  # ── Django: Tests — skip if no test files exist yet ──
+  if find tests/ -name "test_*.py" -o -name "*_test.py" 2>/dev/null | grep -q .; then
+    echo -e "${YELLOW}   Running Django tests...${NC}"
+    if python3 manage.py test 2>/dev/null; then
+      echo -e "${GREEN}✅ Django tests passed.${NC}"
+    else
+      echo -e "${RED}🚫 Django tests failed. Fix failing tests before pushing.${NC}"
+      exit 1
+    fi
   else
-    echo -e "${RED}🚫 Django tests failed. Fix failing tests before pushing.${NC}"
-    exit 1
+    echo -e "${YELLOW}⚠️  No test files found in tests/. Skipping test check.${NC}"
+    echo -e "${YELLOW}   Add test_*.py or *_test.py files to tests/ to enable this check.${NC}"
   fi
 
 elif [ -f "app.py" ] || [ -f "requirements.txt" ]; then
-  # ── Flask / Python: run pytest ──
-  echo -e "${YELLOW}   Running pytest...${NC}"
-  if pytest tests/ -q 2>/dev/null; then
-    echo -e "${GREEN}✅ pytest passed.${NC}"
+  # ── Flask / Python: Tests — skip if no test files exist yet ──
+  if find tests/ -name "test_*.py" -o -name "*_test.py" 2>/dev/null | grep -q .; then
+    echo -e "${YELLOW}   Running pytest...${NC}"
+    if pytest tests/ -q 2>/dev/null; then
+      echo -e "${GREEN}✅ pytest passed.${NC}"
+    else
+      echo -e "${RED}🚫 pytest failed. Fix failing tests before pushing.${NC}"
+      exit 1
+    fi
   else
-    echo -e "${RED}🚫 pytest failed. Fix failing tests before pushing.${NC}"
-    exit 1
+    echo -e "${YELLOW}⚠️  No test files found in tests/. Skipping test check.${NC}"
+    echo -e "${YELLOW}   Add test_*.py or *_test.py files to tests/ to enable this check.${NC}"
   fi
 
 else

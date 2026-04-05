@@ -54,7 +54,6 @@ check_file_path() {
 scaffold_base() {
   mkdir -p "$default_project_path/$project_name"/{hooks,src,tests}
   touch "$default_project_path/$project_name"/{.env,.gitignore,README.md}
-  touch "$default_project_path/$project_name/src/index.js"
 
   # Copy pre-push-checks.sh into project root
   cp "$(dirname "$0")/pre-push-checks.sh" "$default_project_path/$project_name/pre-push-checks.sh"
@@ -65,6 +64,23 @@ scaffold_base() {
   chmod +x "$default_project_path/$project_name/hooks/pre-push"
 }
 
+# Write eslint.config.js — ESLint v9+ flat config format
+write_eslint_config() {
+cat > "$default_project_path/$project_name/eslint.config.js" <<'EOF'
+import js from "@eslint/js";
+
+export default [
+  js.configs.recommended,
+  {
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module"
+    }
+  }
+];
+EOF
+}
+
 # Git init + push to GitHub
 git_init_and_push() {
   cd "$default_project_path/$project_name" || exit
@@ -73,7 +89,8 @@ git_init_and_push() {
   git switch -c "$branch_name"
   git add .
   git commit -m "Chores(Bootstrap): Initial commit"
-  gh repo create "$project_name" --public --source=. --remote=origin --push # use --private for private repo
+  gh repo create "$project_name" --public --source=. #--remote=origin --push  # use --private for private repo
+  git push -u origin "$branch_name"
 }
 
 # ═══════════════════════════════════════════════════════════════
@@ -103,17 +120,20 @@ case $project_type in
   1) # ── Node ──────────────────────────────────────────────────
     project_label="Node application"
     scaffold_base
-    touch "$default_project_path/$project_name/src/index.js"
+    write_eslint_config
+    echo "// Entry point" > "$default_project_path/$project_name/src/index.js"
     printf "node_modules/\ndist/\n.env\n" > "$default_project_path/$project_name/.gitignore"
     cd "$default_project_path/$project_name" || exit
     npm init -y
+    npm pkg set type="module"
+    npm install eslint @eslint/js --save-dev
     git_init_and_push
     ;;
 
   2) # ── Python ────────────────────────────────────────────────
     project_label="Python application"
     scaffold_base
-    touch "$default_project_path/$project_name/src/main.py"
+    echo "# Entry point" > "$default_project_path/$project_name/src/main.py"
     printf "venv/\n__pycache__/\n.env\n*.pyc\n" > "$default_project_path/$project_name/.gitignore"
     cd "$default_project_path/$project_name" || exit
     python3 -m venv venv
@@ -126,8 +146,9 @@ case $project_type in
   3) # ── React ─────────────────────────────────────────────────
     project_label="React application"
     scaffold_base
+    write_eslint_config
     mkdir -p "$default_project_path/$project_name/public"
-    touch "$default_project_path/$project_name/src/index.js"
+    echo "// Entry point" > "$default_project_path/$project_name/src/index.js"
     printf "node_modules/\nbuild/\n.env\n" > "$default_project_path/$project_name/.gitignore"
     cd "$default_project_path/$project_name" || exit
     npx create-react-app .
@@ -137,6 +158,7 @@ case $project_type in
   4) # ── Django ────────────────────────────────────────────────
     project_label="Django application"
     scaffold_base
+    echo "# Entry point" > "$default_project_path/$project_name/src/main.py"
     printf "venv/\n__pycache__/\n.env\n*.pyc\ndb.sqlite3\n" > "$default_project_path/$project_name/.gitignore"
     cd "$default_project_path/$project_name" || exit
     python3 -m venv venv
@@ -151,6 +173,7 @@ case $project_type in
   5) # ── Flask ─────────────────────────────────────────────────
     project_label="Flask application"
     scaffold_base
+    echo "# Entry point" > "$default_project_path/$project_name/src/main.py"
     printf "venv/\n__pycache__/\n.env\n*.pyc\n" > "$default_project_path/$project_name/.gitignore"
     cd "$default_project_path/$project_name" || exit
     python3 -m venv venv
@@ -185,7 +208,8 @@ esac
 
 echo -e "\n${GREEN}✅ '$project_name' ($project_label) created at $default_project_path/$project_name${NC}"
 echo -e "${YELLOW}📁 Project structure:${NC}"
-tree -a "$default_project_path/$project_name"
+#tree -a "$default_project_path/$project_name" # Temporarily removed to avoid dependency on tree command
 echo -e "${BLUE}=======================================================================${NC}"
-echo -e "${GREEN}🎉 All set! Your project is ready and pushed to Git"
+echo -e "${GREEN}🎉 All set! Your project is ready and pushed to GitHub.${NC}"
 echo -e "${BLUE}=======================================================================${NC}"
+
