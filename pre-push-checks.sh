@@ -77,64 +77,19 @@ else
   echo -e "${YELLOW}⚠️  No recognised runtime indicator found. Skipping version check.${NC}"
 fi
 
-# ─── 4. Lint + test checks ───────────────────────────────────────
+# ─── 4. Lint + test checks via Makefile ─────────────────────────
 echo -e "\n${YELLOW}[4/4] Running lint and test checks...${NC}"
 
-if [ -f "package.json" ]; then
-  # ── Node / React: ESLint ──
-  if npx eslint src/ --quiet 2>/dev/null; then
-    echo -e "${GREEN}✅ ESLint passed.${NC}"
+if [ -f "Makefile" ]; then
+  echo -e "${YELLOW}   Running make check...${NC}"
+  if make check; then
+    echo -e "${GREEN}✅ All checks passed.${NC}"
   else
-    echo -e "${RED}🚫 ESLint failed. Fix linting errors before pushing.${NC}"
+    echo -e "${RED}🚫 make check failed. Fix errors before pushing.${NC}"
     exit 1
   fi
-
-  # ── Node / React: Tests — skip if no test files exist yet ──
-  if find tests/ -name "*.test.js" -o -name "*.spec.js" 2>/dev/null | grep -q .; then
-    echo -e "${YELLOW}   Running npm test...${NC}"
-    if npm test -- --watchAll=false 2>/dev/null; then
-      echo -e "${GREEN}✅ Tests passed.${NC}"
-    else
-      echo -e "${RED}🚫 Tests failed. Fix failing tests before pushing.${NC}"
-      exit 1
-    fi
-  else
-    echo -e "${YELLOW}⚠️  No test files found in tests/. Skipping test check.${NC}"
-    echo -e "${YELLOW}   Add *.test.js or *.spec.js files to tests/ to enable this check.${NC}"
-  fi
-
-elif [ -f "manage.py" ]; then
-  # ── Django: Tests — skip if no test files exist yet ──
-  if find tests/ -name "test_*.py" -o -name "*_test.py" 2>/dev/null | grep -q .; then
-    echo -e "${YELLOW}   Running Django tests...${NC}"
-    if python3 manage.py test 2>/dev/null; then
-      echo -e "${GREEN}✅ Django tests passed.${NC}"
-    else
-      echo -e "${RED}🚫 Django tests failed. Fix failing tests before pushing.${NC}"
-      exit 1
-    fi
-  else
-    echo -e "${YELLOW}⚠️  No test files found in tests/. Skipping test check.${NC}"
-    echo -e "${YELLOW}   Add test_*.py or *_test.py files to tests/ to enable this check.${NC}"
-  fi
-
-elif [ -f "app.py" ] || [ -f "requirements.txt" ]; then
-  # ── Flask / Python: Tests — skip if no test files exist yet ──
-  if find tests/ -name "test_*.py" -o -name "*_test.py" 2>/dev/null | grep -q .; then
-    echo -e "${YELLOW}   Running pytest...${NC}"
-    if pytest tests/ -q 2>/dev/null; then
-      echo -e "${GREEN}✅ pytest passed.${NC}"
-    else
-      echo -e "${RED}🚫 pytest failed. Fix failing tests before pushing.${NC}"
-      exit 1
-    fi
-  else
-    echo -e "${YELLOW}⚠️  No test files found in tests/. Skipping test check.${NC}"
-    echo -e "${YELLOW}   Add test_*.py or *_test.py files to tests/ to enable this check.${NC}"
-  fi
-
 else
-  echo -e "${YELLOW}⚠️  No test runner detected. Skipping test check.${NC}"
+  echo -e "${YELLOW}⚠️  No Makefile found. Skipping checks.${NC}"
 fi
 
 # ─── All checks passed ──────────────────────────────────────────

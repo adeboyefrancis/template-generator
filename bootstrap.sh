@@ -5,6 +5,8 @@
 # Runs ONCE to scaffold project structure, init git, and set up hooks
 # ═══════════════════════════════════════════════════════════════
 
+set -e # Exit immediately if a command exits with a non-zero status
+
 # Colour Schemes
 RED='\033[0;31m'
 BLUE='\033[0;34m'
@@ -19,8 +21,6 @@ current_directory=$(pwd)
 last_login=$(date)
 default_project_path="$HOME/northstar_projects"
 branch_name="feature/initial-setup"
-GH_TOKEN=$(gh auth token)
-export GH_TOKEN
 
 echo -e "${BLUE}===================== Project Scaffolder ===============================${NC}"
 echo -e "Username:          ${LIGHT_BLUE}$current_user${NC}"
@@ -83,6 +83,13 @@ EOF
 
 # Git init + push to GitHub
 git_init_and_push() {
+
+  # ✅ Check GitHub authentication FIRST
+  if ! gh auth status >/dev/null 2>&1; then
+    echo "❌ GitHub CLI not authenticated. Run: gh auth login"
+    exit 1
+  fi
+
   cd "$default_project_path/$project_name" || exit
   git init
   git config core.hooksPath hooks
@@ -120,6 +127,7 @@ case $project_type in
   1) # ── Node ──────────────────────────────────────────────────
     project_label="Node application"
     scaffold_base
+    cp "$(dirname "$0")/templates/node/Makefile" "$default_project_path/$project_name/Makefile"
     write_eslint_config
     echo "// Entry point" > "$default_project_path/$project_name/src/index.js"
     printf "node_modules/\ndist/\n.env\n" > "$default_project_path/$project_name/.gitignore"
@@ -133,6 +141,7 @@ case $project_type in
   2) # ── Python ────────────────────────────────────────────────
     project_label="Python application"
     scaffold_base
+    cp "$(dirname "$0")/templates/python/Makefile" "$default_project_path/$project_name/Makefile"
     echo "# Entry point" > "$default_project_path/$project_name/src/main.py"
     printf "venv/\n__pycache__/\n.env\n*.pyc\n" > "$default_project_path/$project_name/.gitignore"
     cd "$default_project_path/$project_name" || exit
@@ -146,6 +155,7 @@ case $project_type in
   3) # ── React ─────────────────────────────────────────────────
     project_label="React application"
     scaffold_base
+    cp "$(dirname "$0")/templates/react/Makefile" "$default_project_path/$project_name/Makefile"
     write_eslint_config
     mkdir -p "$default_project_path/$project_name/public"
     echo "// Entry point" > "$default_project_path/$project_name/src/index.js"
@@ -158,6 +168,7 @@ case $project_type in
   4) # ── Django ────────────────────────────────────────────────
     project_label="Django application"
     scaffold_base
+    cp "$(dirname "$0")/templates/django/Makefile" "$default_project_path/$project_name/Makefile"
     echo "# Entry point" > "$default_project_path/$project_name/src/main.py"
     printf "venv/\n__pycache__/\n.env\n*.pyc\ndb.sqlite3\n" > "$default_project_path/$project_name/.gitignore"
     cd "$default_project_path/$project_name" || exit
@@ -173,6 +184,7 @@ case $project_type in
   5) # ── Flask ─────────────────────────────────────────────────
     project_label="Flask application"
     scaffold_base
+    cp "$(dirname "$0")/templates/flask/Makefile" "$default_project_path/$project_name/Makefile"
     echo "# Entry point" > "$default_project_path/$project_name/src/main.py"
     printf "venv/\n__pycache__/\n.env\n*.pyc\n" > "$default_project_path/$project_name/.gitignore"
     cd "$default_project_path/$project_name" || exit
@@ -187,6 +199,7 @@ case $project_type in
   6) # ── Spring Boot ───────────────────────────────────────────
     project_label="Spring Boot application"
     scaffold_base
+    cp "$(dirname "$0")/templates/springboot/Makefile" "$default_project_path/$project_name/Makefile"
     printf "target/\n.env\n*.class\n" > "$default_project_path/$project_name/.gitignore"
     cd "$default_project_path/$project_name" || exit
     curl https://start.spring.io/starter.zip \
