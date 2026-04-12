@@ -91,6 +91,10 @@ scaffold_base() {
  
   cp "$SCRIPT_DIR/hooks/pre-push" "$project_dir/hooks/pre-push"
   chmod +x "$project_dir/hooks/pre-push"
+
+  cp "$SCRIPT_DIR/templates/Dockerfile" "$project_dir/"
+  cp "$SCRIPT_DIR/templates/docker-compose.yml" "$project_dir/"
+  cp "$SCRIPT_DIR/templates/.dockerignore" "$project_dir/" 
 }
  
 write_eslint_config() {
@@ -108,6 +112,50 @@ export default [
 ];
 EOF
 }
+
+write_eslint_config_react() {
+cat > "$project_dir/eslint.config.js" <<'EOF'
+import js from "@eslint/js";
+import reactPlugin from "eslint-plugin-react";
+import reactHooks from "eslint-plugin-react-hooks";
+
+export default [
+  js.configs.recommended,
+  {
+    files: ["src/**/*.{js,jsx}"],
+    plugins: {
+      react: reactPlugin,
+      "react-hooks": reactHooks
+    },
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: {
+        document: "readonly",
+        window: "readonly",
+        console: "readonly"
+      },
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true
+        }
+      }
+    },
+    rules: {
+      ...reactPlugin.configs.recommended.rules,
+      ...reactHooks.configs.recommended.rules,
+      "react/react-in-jsx-scope": "off",  // ← React 17+ doesn't need import
+      "react/jsx-no-target-blank": "warn" // ← downgrade to warning not error
+    },
+    settings: {
+      react: {
+        version: "detect"
+      }
+    }
+  }
+];
+EOF
+}
  
 git_init_and_push() {
   # GitHub auth check
@@ -117,6 +165,8 @@ git_init_and_push() {
   fi
  
   # Export token for non-interactive shell
+  gh_user=$(gh api user --jq .login)
+  gh_protocol=$(gh config get git_protocol 2>/dev/null || echo "https")
   GH_TOKEN=$(gh auth token)
   export GH_TOKEN
  
@@ -127,7 +177,22 @@ git_init_and_push() {
   git add .
   git commit -m "Chores(Bootstrap): Initial commit"
   gh repo create "$project_name" --public --source=. #--remote=origin --push  # use --private for private repo
+
+    # Set remote based on preferred protocol
+  if ! git remote | grep -q "origin"; then
+   if [ "$gh_protocol" = "ssh" ]; then
+    git remote set-url origin "git@github.com:$gh_user/$project_name.git"
+  else
+    git remote set-url origin "https://github.com/$gh_user/$project_name.git"
+  fi
+    fi
   git push -u origin "$branch_name"
+
+  # Create local main tracking remote
+  git fetch origin
+  git switch -c main
+  git push -u origin main --no-verify # skip pre-push checks for main since it's just the initial commit, and we want to avoid blocking on any issues in the scaffold
+  git switch "$branch_name"  # switch back to feature branch
 }
  
 # ═══════════════════════════════════════════════════════════════
@@ -180,14 +245,15 @@ case $project_type in
  
   3)
     project_label="React application"
+    mkdir -p "$project_dir"
+    cd "$project_dir" || exit
+    npx --yes degit vitejs/vite/packages/create-vite/template-react . # Interactive Option Runs/Start server npm create vite@latest . -- --template react -yes
+    mv "$project_dir/_gitignore" "$project_dir/.gitignore" # Vite creates _gitignore by default, rename it to .gitignore
+    npm install
+    npm install eslint eslint-plugin-react eslint-plugin-react-hooks --save-dev
     scaffold_base
     cp "$SCRIPT_DIR/templates/react/Makefile" "$project_dir/Makefile"
-    write_eslint_config
-    mkdir -p "$project_dir/public"
-    echo "// Entry point" > "$project_dir/src/index.js"
-    printf "node_modules/\nbuild/\n.env\n" > "$project_dir/.gitignore"
-    cd "$project_dir" || exit
-    npx create-react-app .
+    write_eslint_config_react
     git_init_and_push
     ;;
  
