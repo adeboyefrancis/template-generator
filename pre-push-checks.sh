@@ -78,7 +78,7 @@ else
 fi
 
 # ─── 4. Lint + test checks via Makefile ─────────────────────────
-echo -e "\n${YELLOW}[4/4] Running lint and test checks...${NC}"
+echo -e "\n${YELLOW}[4/5] Running lint and test checks...${NC}"
 
 if [ -f "Makefile" ]; then
   echo -e "${YELLOW}   Running make check...${NC}"
@@ -91,6 +91,19 @@ if [ -f "Makefile" ]; then
 else
   echo -e "${YELLOW}⚠️  No Makefile found. Skipping checks.${NC}"
 fi
+
+
+# ─── 5. Docker files check ──────────────────────────────────────
+echo -e "\n${YELLOW}[5/5] Checking for Docker files...${NC}"
+
+if [ -f "Dockerfile" ] && [ -f "docker-compose.yml" ] && [ -f ".dockerignore" ]; then
+  echo -e "${GREEN}✅ All Docker files present.${NC}"
+else
+  echo -e "${RED}🚫 Docker files missing. Please ensure Dockerfile, docker-compose.yml and .dockerignore exist.${NC}"
+  exit 1
+fi
+
+
 
 # ─── All checks passed ──────────────────────────────────────────
 echo -e "\n${BLUE}=======================================================================${NC}"
