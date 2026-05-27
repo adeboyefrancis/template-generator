@@ -83,8 +83,8 @@ check_file_path
 # ═══════════════════════════════════════════════════════════════
  
 scaffold_base() {
-  mkdir -p "$project_dir"/{hooks,src,tests}
-  touch "$project_dir"/{.env,.gitignore,README.md}
+  mkdir -p "$project_dir"/{hooks,src,tests,docs,scripts}
+  touch "$project_dir"/{.env,.gitignore,CHANGELOG.md,CONTRIBUTING.md,LICENSE,CODEOWNERS,.gitignore,.editorconfig}
  
   cp "$SCRIPT_DIR/pre-push-checks.sh" "$project_dir/pre-push-checks.sh"
   chmod +x "$project_dir/pre-push-checks.sh"
